@@ -1,7 +1,9 @@
+import { Constructor } from './types'
+
 type Instances = Record<string, any>
 type Factory<T, K> = (deps: T) => K
-type Factories<T extends Instances> = {
-  [P in keyof T]?: Factory<T, T[P]>
+export type Factories<T extends Instances> = {
+  [P in keyof T]: Factory<T, T[P]>
 }
 
 function injector (container: Inversime<any>) {
@@ -24,8 +26,12 @@ export class Inversime<T extends Object> {
     }
   }
 
-  static transient<T, K> (fn: Factory<T, K>): Factory<T, K> {
-    return fn
+  static fromClass<T, K> (Clazz: Constructor<K>): Factory<T, K> {
+    return (deps: T) => new Clazz(deps)
+  }
+
+  static fromValue<T, K> (value: K): Factory<T, K> {
+    return () => value
   }
 
   constructor (protected factories: Factories<T>) {}
@@ -33,7 +39,7 @@ export class Inversime<T extends Object> {
   get<K extends keyof T> (key: K): T[K] {
     const factory = this.factories[key]
     if (!factory) {
-      throw Error(`Inversime: ${key.toString()} doesn't exist`)
+      throw Error(`Inversime: ${key.toString()} not registered`)
     }
 
     return factory(injector(this))

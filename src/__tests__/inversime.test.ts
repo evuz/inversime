@@ -57,13 +57,28 @@ describe('Inversime', () => {
   test('should emit values', async () => {
     const container = inversime<Container>({
       store: Inversime.singleton(() => new Store()),
-      service: Inversime.transient((d) => new BookService(d)),
-      bookApiClient: Inversime.transient(() => new BookApiClient()),
-      useCase: Inversime.transient(d => new GetBooksUseCase(d))
+      service: Inversime.fromClass(BookService),
+      bookApiClient: Inversime.fromClass(BookApiClient),
+      useCase: Inversime.fromClass(GetBooksUseCase)
     })
 
     const books = await container.get('useCase').execute()
     const store = container.get('store')
     expect(books).toBe(store.get())
+  })
+
+  test('should throw an error when getting an unregistered dependency', async () => {
+    const container = inversime<Container>({
+      store: Inversime.singleton(() => new Store()),
+      service: Inversime.fromClass(BookService),
+      bookApiClient: Inversime.fromClass(BookApiClient),
+      useCase: Inversime.fromClass(GetBooksUseCase)
+    })
+
+    function error () {
+      container.get('book' as any)
+    }
+
+    expect(error).toThrowError(/book/)
   })
 })
