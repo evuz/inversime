@@ -11,6 +11,7 @@ type Container = {
   store: Store;
   service: BookService
   bookApiClient: BookApiClient
+  useCase: GetBooksUseCase
 };
 
 class Store {
@@ -36,7 +37,7 @@ class BookApiClient {
 }
 
 class BookService {
-  constructor (private deps: Container) {}
+  constructor (private deps: Pick<Container, 'bookApiClient' | 'store'>) {}
 
   async get () {
     const books = await this.deps.bookApiClient.get()
@@ -46,7 +47,7 @@ class BookService {
 }
 
 class GetBooksUseCase {
-  constructor (private deps: Container) {}
+  constructor (private deps: Pick<Container, 'service'>) {}
   execute () {
     return this.deps.service.get()
   }
@@ -54,15 +55,15 @@ class GetBooksUseCase {
 
 describe('Inversime', () => {
   test('should emit values', async () => {
-    const container = inversime({
+    const container = inversime<Container>({
       store: Inversime.singleton(() => new Store()),
       service: Inversime.transient((d) => new BookService(d)),
       bookApiClient: Inversime.transient(() => new BookApiClient()),
       useCase: Inversime.transient(d => new GetBooksUseCase(d))
     })
 
-    const books = await container.get('useCase')?.execute()
+    const books = await container.get('useCase').execute()
     const store = container.get('store')
-    expect(books).toBe(store?.get())
+    expect(books).toBe(store.get())
   })
 })

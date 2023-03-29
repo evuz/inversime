@@ -1,10 +1,10 @@
+type Instances = Record<string, any>
 type Factory<T, K> = (deps: T) => K
-type Factories<T> = Record<string, Factory<T, any>>
-type Instances<T extends Factories<any>> = {
-  [P in keyof T]?: ReturnType<T[P]>;
+type Factories<T extends Instances> = {
+  [P in keyof T]?: Factory<T, T[P]>
 }
 
-function injector (container: Inversime<any, any>) {
+function injector (container: Inversime<any>) {
   return new Proxy({} as any, {
     get: (_, key) => {
       return container.get(key)
@@ -12,11 +12,11 @@ function injector (container: Inversime<any, any>) {
   })
 }
 
-export class Inversime<T extends Factories<any>, K = Instances<T>> {
-  static singleton<V, P> (fn: (deps: V) => P): Factory<V, P> {
-    let instance: P | undefined
+export class Inversime<T extends Object> {
+  static singleton<T, K> (fn: Factory<T, K>): Factory<T, K> {
+    let instance: K | undefined
 
-    return (deps: V) => {
+    return (deps: T) => {
       if (!instance) {
         instance = fn(deps)
       }
@@ -24,14 +24,14 @@ export class Inversime<T extends Factories<any>, K = Instances<T>> {
     }
   }
 
-  static transient<V, P> (fn: (deps: V) => P): Factory<V, P> {
+  static transient<T, K> (fn: Factory<T, K>): Factory<T, K> {
     return fn
   }
 
-  constructor (protected factories: T) {}
+  constructor (protected factories: Factories<T>) {}
 
-  get<V extends keyof K> (key: V): K[V] {
-    const factory = this.factories[key as any]
+  get<K extends keyof T> (key: K): T[K] {
+    const factory = this.factories[key]
     if (!factory) {
       throw Error(`Inversime: ${key.toString()} doesn't exist`)
     }
@@ -40,6 +40,6 @@ export class Inversime<T extends Factories<any>, K = Instances<T>> {
   }
 }
 
-export function inversime<T extends Factories<any>> (factories: T) {
-  return new Inversime(factories)
+export function inversime<T extends Object> (factories: Factories<T>) {
+  return new Inversime<T>(factories)
 }
