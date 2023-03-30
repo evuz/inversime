@@ -34,7 +34,11 @@ export class Inversime<T extends Object> {
     return () => value
   }
 
-  constructor (protected factories: Factories<T>) {}
+  constructor (protected factories: Partial<Factories<T>>) {}
+
+  register<K extends keyof T> (key: K, factory: Factory<T, T[K]>): void {
+    this.factories[key] = factory
+  }
 
   get<K extends keyof T> (key: K): T[K] {
     const factory = this.factories[key]
@@ -46,6 +50,6 @@ export class Inversime<T extends Object> {
   }
 }
 
-export function inversime<T extends Object> (factories: Factories<T>) {
+export function inversime<T extends Object> (factories: Partial<Factories<T>>) {
   return new Inversime<T>(factories)
 }
