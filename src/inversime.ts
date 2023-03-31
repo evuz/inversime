@@ -1,4 +1,4 @@
-import { Constructor } from './types'
+import { Constructor, Paths } from './types'
 
 type Instances = Record<string, any>
 type Factory<T, K> = (deps: T) => K
@@ -34,9 +34,12 @@ export class Inversime<T extends Object> {
     return () => value
   }
 
-  static extract<T extends Object, K extends Array<keyof T>, U, V extends any[]> (factory: (...deps: V) => U, keys: K): Factory<T, U> {
+  static extract<T extends Object, K extends Paths<T>[], U, V extends any[]> (factory: (...deps: V) => U, paths: K): Factory<T, U> {
     return (deps: T) => {
-      const extractedDeps = keys.map(key => deps[key])
+      const extractedDeps = paths.map(path => {
+        const keys = (<string>path).split('.')
+        return keys.reduce<any>((acc, key) => acc[key], deps)
+      })
       return factory(...extractedDeps as any)
     }
   }

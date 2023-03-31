@@ -166,5 +166,29 @@ describe('Inversime', () => {
       const store = container.get('store')
       expect(books).toBe(store.get())
     })
+
+    test('should extract arguments from context', async () => {
+      type Container = {
+        books: {
+          apiClient: BookApiClient
+          store: BookStore;
+        },
+        service: BookService
+        useCase: GetBooksUseCase
+      }
+
+      const container = inversime<Container>({
+        books: Inversime.context({
+          apiClient: Inversime.fromClass(BookApiClient),
+          store: Inversime.singleton(() => new BookStore())
+        }),
+        service: Inversime.extract(Inversime.fromClass(BookService), ['books.apiClient', 'books.store']),
+        useCase: Inversime.fromClass(GetBooksUseCase)
+      })
+
+      const books = await container.get('useCase').execute()
+      const store = container.get('books').store
+      expect(books).toBe(store.get())
+    })
   })
 })
