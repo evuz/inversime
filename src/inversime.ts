@@ -34,7 +34,20 @@ export class Inversime<T extends Object> {
     return () => value
   }
 
-  constructor (protected factories: Partial<Factories<T>>) {}
+  static context<T, K extends Object> (value: Factories<K>): Factory<T, K> {
+    return (deps: T) => {
+      const container = new Inversime(value)
+      container.deps = deps as any
+
+      return injector(container)
+    }
+  }
+
+  private deps: T
+
+  constructor (protected factories: Partial<Factories<T>>) {
+    this.deps = injector(this)
+  }
 
   register<K extends keyof T> (key: K, factory: Factory<T, T[K]>): void {
     this.factories[key] = factory
@@ -46,7 +59,7 @@ export class Inversime<T extends Object> {
       throw Error(`Inversime: ${key.toString()} not registered`)
     }
 
-    return factory(injector(this))
+    return factory(this.deps)
   }
 }
 

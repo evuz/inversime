@@ -7,14 +7,7 @@ type Book = {
   read: boolean
 }
 
-type Container = {
-  store: Store;
-  service: BookService
-  bookApiClient: BookApiClient
-  useCase: GetBooksUseCase
-};
-
-class Store {
+class BookStore {
   books: Book[]
   set (books: Book[]) {
     this.books = books
@@ -36,27 +29,34 @@ class BookApiClient {
   }
 }
 
-class BookService {
-  constructor (private deps: Pick<Container, 'bookApiClient' | 'store'>) {}
-
-  async get () {
-    const books = await this.deps.bookApiClient.get()
-    this.deps.store.set(books)
-    return books
-  }
-}
-
-class GetBooksUseCase {
-  constructor (private deps: Pick<Container, 'service'>) {}
-  execute () {
-    return this.deps.service.get()
-  }
-}
-
 describe('Inversime', () => {
+  type Container = {
+    store: BookStore;
+    service: BookService
+    bookApiClient: BookApiClient
+    useCase: GetBooksUseCase
+  };
+
+  class BookService {
+    constructor (private deps: Pick<Container, 'bookApiClient' | 'store'>) {}
+
+    async get () {
+      const books = await this.deps.bookApiClient.get()
+      this.deps.store.set(books)
+      return books
+    }
+  }
+
+  class GetBooksUseCase {
+    constructor (private deps: Pick<Container, 'service'>) {}
+    execute () {
+      return this.deps.service.get()
+    }
+  }
+
   test('should emit values', async () => {
     const container = inversime<Container>({
-      store: Inversime.singleton(() => new Store()),
+      store: Inversime.singleton(() => new BookStore()),
       service: Inversime.fromClass(BookService),
       bookApiClient: Inversime.fromClass(BookApiClient),
       useCase: Inversime.fromClass(GetBooksUseCase)
@@ -69,7 +69,7 @@ describe('Inversime', () => {
 
   test('should throw an error when getting an unregistered dependency', () => {
     const container = inversime<Container>({
-      store: Inversime.singleton(() => new Store()),
+      store: Inversime.singleton(() => new BookStore()),
       service: Inversime.fromClass(BookService),
       bookApiClient: Inversime.fromClass(BookApiClient),
       useCase: Inversime.fromClass(GetBooksUseCase)
@@ -89,10 +89,53 @@ describe('Inversime', () => {
       useCase: Inversime.fromClass(GetBooksUseCase)
     })
 
-    container.register('store', Inversime.singleton(Inversime.fromClass(Store)))
+    container.register('store', Inversime.singleton(Inversime.fromClass(BookStore)))
 
     const books = await container.get('useCase').execute()
     const store = container.get('store')
     expect(books).toBe(store.get())
+  })
+
+  describe('context', () => {
+    type Container = {
+      books: {
+        apiClient: BookApiClient
+        service: BookService
+        store: BookStore;
+      },
+      useCase: GetBooksUseCase
+    }
+
+    class BookService {
+      constructor (private deps: Pick<Container, 'books'>) {}
+
+      async get () {
+        const books = await this.deps.books.apiClient.get()
+        this.deps.books.store.set(books)
+        return books
+      }
+    }
+
+    class GetBooksUseCase {
+      constructor (private deps: Pick<Container, 'books'>) {}
+      execute () {
+        return this.deps.books.service.get()
+      }
+    }
+
+    test('should register a context', async () => {
+      const container = inversime<Container>({
+        books: Inversime.context({
+          service: Inversime.fromClass(BookService),
+          apiClient: Inversime.fromClass(BookApiClient),
+          store: Inversime.singleton(() => new BookStore())
+        }),
+        useCase: Inversime.fromClass(GetBooksUseCase)
+      })
+
+      const books = await container.get('useCase').execute()
+      const store = container.get('books').store
+      expect(books).toBe(store.get())
+    })
   })
 })
