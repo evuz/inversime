@@ -1,4 +1,4 @@
-name: Publish Observame to npm
+name: Publish Inversime to npm
 on:
   push:
     tags:
