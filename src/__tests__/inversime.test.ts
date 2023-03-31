@@ -7,6 +7,10 @@ type Book = {
   read: boolean
 }
 
+interface IBookService {
+  get(): Promise<Book[]>
+}
+
 class BookStore {
   books: Book[]
   set (books: Book[]) {
@@ -32,12 +36,12 @@ class BookApiClient {
 describe('Inversime', () => {
   type Container = {
     store: BookStore;
-    service: BookService
+    service: IBookService
     bookApiClient: BookApiClient
     useCase: GetBooksUseCase
   };
 
-  class BookService {
+  class BookService implements IBookService {
     constructor (private deps: Pick<Container, 'bookApiClient' | 'store'>) {}
 
     async get () {
@@ -135,6 +139,31 @@ describe('Inversime', () => {
 
       const books = await container.get('useCase').execute()
       const store = container.get('books').store
+      expect(books).toBe(store.get())
+    })
+  })
+
+  describe('extract', () => {
+    class BookService implements IBookService {
+      constructor (private apiClient: BookApiClient, private store: BookStore) {}
+
+      async get () {
+        const books = await this.apiClient.get()
+        this.store.set(books)
+        return books
+      }
+    }
+
+    test('should extract arguments and inject them', async () => {
+      const container = inversime<Container>({
+        store: Inversime.singleton(() => new BookStore()),
+        service: Inversime.extract(Inversime.fromClass(BookService), ['bookApiClient', 'store']),
+        bookApiClient: Inversime.fromClass(BookApiClient),
+        useCase: Inversime.fromClass(GetBooksUseCase)
+      })
+
+      const books = await container.get('useCase').execute()
+      const store = container.get('store')
       expect(books).toBe(store.get())
     })
   })

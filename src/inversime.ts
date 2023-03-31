@@ -34,6 +34,13 @@ export class Inversime<T extends Object> {
     return () => value
   }
 
+  static extract<T extends Object, K extends Array<keyof T>, U, V extends any[]> (factory: (...deps: V) => U, keys: K): Factory<T, U> {
+    return (deps: T) => {
+      const extractedDeps = keys.map(key => deps[key])
+      return factory(...extractedDeps as any)
+    }
+  }
+
   static context<T, K extends Object> (value: Factories<K, T>): Factory<T, K> {
     return (deps: T) => {
       const container = new Inversime(value as any)
