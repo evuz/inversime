@@ -2,8 +2,8 @@ import { Constructor } from './types'
 
 type Instances = Record<string, any>
 type Factory<T, K> = (deps: T) => K
-export type Factories<T extends Instances> = {
-  [P in keyof T]: Factory<T, T[P]>
+export type Factories<T extends Instances, K = T> = {
+  [P in keyof T]: Factory<K, T[P]>
 }
 
 function injector (container: Inversime<any>) {
@@ -15,28 +15,28 @@ function injector (container: Inversime<any>) {
 }
 
 export class Inversime<T extends Object> {
-  static singleton<T, K> (fn: Factory<T, K>): Factory<T, K> {
-    let instance: K | undefined
+  static singleton<T, K extends any[]> (fn: (...deps: K) => T) {
+    let instance: T | undefined
 
-    return (deps: T) => {
+    return (...deps: K) => {
       if (!instance) {
-        instance = fn(deps)
+        instance = fn(...deps)
       }
       return instance
     }
   }
 
-  static fromClass<T, K> (Clazz: Constructor<K>): Factory<T, K> {
-    return (deps: T) => new Clazz(deps)
+  static fromClass<T, K extends any[]> (Clazz: Constructor<T, K>) {
+    return (...deps: K) => new Clazz(...deps)
   }
 
   static fromValue<T, K> (value: K): Factory<T, K> {
     return () => value
   }
 
-  static context<T, K extends Object> (value: Factories<K>): Factory<T, K> {
+  static context<T, K extends Object> (value: Factories<K, T>): Factory<T, K> {
     return (deps: T) => {
-      const container = new Inversime(value)
+      const container = new Inversime(value as any)
       container.deps = deps as any
 
       return injector(container)
@@ -49,8 +49,9 @@ export class Inversime<T extends Object> {
     this.deps = injector(this)
   }
 
-  register<K extends keyof T> (key: K, factory: Factory<T, T[K]>): void {
+  register<K extends keyof T> (key: K, factory: Factory<T, T[K]>) {
     this.factories[key] = factory
+    return this
   }
 
   get<K extends keyof T> (key: K): T[K] {
