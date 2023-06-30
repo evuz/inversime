@@ -53,7 +53,7 @@ export class Inversime<T extends Object> {
     })
   }
 
-  private deps: T
+  public deps: T
 
   constructor (protected factories: Partial<Factories<T>>) {
     this.deps = injector(this)
