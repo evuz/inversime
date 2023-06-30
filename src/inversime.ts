@@ -45,12 +45,12 @@ export class Inversime<T extends Object> {
   }
 
   static context<T, K extends Object> (value: Factories<K, T>): Factory<T, K> {
-    return (deps: T) => {
+    return Inversime.singleton((deps: T) => {
       const container = new Inversime(value as any)
       container.deps = deps as any
 
-      return injector(container)
-    }
+      return (injector(container))
+    })
   }
 
   private deps: T
