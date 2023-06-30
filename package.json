@@ -1,7 +1,7 @@
 {
   "name": "inversime",
   "description": "Simple reactive library",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/inversime.umd.cjs",
